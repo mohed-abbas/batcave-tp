@@ -56,10 +56,13 @@
   </style>
 </head>
 <body>
-  <header class="bat-header">
+  <header class="bat-header position-relative">
     <i class="fa-solid fa-bat fa-3x" style="color:#5fb2ff;"></i>
     <h1 class="bat-title mt-3">BAT-ORDINATEUR</h1>
     <p id="welcome" class="lead text-info">Authentification...</p>
+    <button id="logoutBtn" class="btn btn-outline-light btn-sm position-absolute" style="top: 1rem; right: 1rem;">
+      <i class="fa-solid fa-right-from-bracket me-1"></i>Déconnexion
+    </button>
   </header>
 
   <main class="container py-5">
@@ -93,12 +96,19 @@
 
     function authHeaders(extra = {}) {
       const creds = getCredentials();
+      // If we have cached creds, inject them; otherwise rely on the browser
+      // auto-resending the Authorization header from the native dialog.
       return creds ? { Authorization: 'Basic ' + creds, ...extra } : extra;
+    }
+
+    function clearCredentials() {
+      sessionStorage.removeItem('batcave_creds');
     }
 
     async function loadMe() {
       const res = await fetch('/api/me', { headers: authHeaders() });
       if (!res.ok) {
+        clearCredentials();
         document.getElementById('welcome').textContent = 'Authentification échouée — rechargez la page';
         return null;
       }
@@ -146,6 +156,12 @@
       } else {
         fb.innerHTML = '<span class="text-danger">Échec de l\'enregistrement.</span>';
       }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try { await fetch('/logout'); } catch {}
+      clearCredentials();
+      window.location.href = '/register.html';
     });
 
     loadMe();

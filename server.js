@@ -140,6 +140,10 @@ app.post('/api/reports', basicAuth, (req, res) => {
   return res.status(201).json({ id: info.lastInsertRowid, user_id: req.user.id, content });
 });
 
+app.get('/logout', (req, res) => {
+  res.status(200).json({ message: 'Deconnexion effectuee. Credentials a effacer cote client.' });
+});
+
 app.get('/', (req, res) => res.redirect('/register.html'));
 
 app.listen(PORT, () => {
