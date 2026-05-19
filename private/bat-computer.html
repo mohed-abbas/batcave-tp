@@ -22,6 +22,22 @@
       letter-spacing: 0.15em;
       color: #5fb2ff;
     }
+    .gadget-card {
+      background: rgba(20, 25, 45, 0.95);
+      border: 1px solid #2a3550;
+      color: #e4e6eb;
+      transition: transform 0.2s, box-shadow 0.2s;
+      height: 100%;
+    }
+    .gadget-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(95, 178, 255, 0.25);
+      border-color: #5fb2ff;
+    }
+    .gadget-icon {
+      font-size: 2.5rem;
+      color: #5fb2ff;
+    }
     .report-card {
       background: rgba(20, 25, 45, 0.95);
       border: 1px solid #2a3550;
@@ -48,6 +64,13 @@
 
   <main class="container py-5">
     <section>
+      <h3 class="mb-4"><i class="fa-solid fa-toolbox me-2"></i>Arsenal disponible</h3>
+      <div id="arsenal" class="row g-4">
+        <div class="text-center text-muted">Chargement de l'arsenal...</div>
+      </div>
+    </section>
+
+    <section class="mt-5">
       <div class="card report-card p-4">
         <h3 class="mb-3"><i class="fa-solid fa-file-pen me-2"></i>Nouveau rapport de mission</h3>
         <form id="reportForm">
@@ -64,16 +87,44 @@
   </main>
 
   <script>
+    function getCredentials() {
+      return sessionStorage.getItem('batcave_creds');
+    }
+
+    function authHeaders(extra = {}) {
+      const creds = getCredentials();
+      return creds ? { Authorization: 'Basic ' + creds, ...extra } : extra;
+    }
+
     async function loadMe() {
-      const res = await fetch('/api/me');
+      const res = await fetch('/api/me', { headers: authHeaders() });
       if (!res.ok) {
-        document.getElementById('welcome').textContent = 'Non authentifié';
+        document.getElementById('welcome').textContent = 'Authentification échouée — rechargez la page';
         return null;
       }
       const data = await res.json();
       document.getElementById('welcome').innerHTML =
         `Bienvenue, Justicier <strong>${data.username}</strong>`;
       return data;
+    }
+
+    async function loadArsenal() {
+      const res = await fetch('/api/secrets', { headers: authHeaders() });
+      const arsenal = document.getElementById('arsenal');
+      if (!res.ok) {
+        arsenal.innerHTML = '<div class="text-danger">Accès refusé à l\'arsenal.</div>';
+        return;
+      }
+      const gadgets = await res.json();
+      arsenal.innerHTML = gadgets.map(g => `
+        <div class="col-12 col-sm-6 col-lg-4">
+          <div class="card gadget-card p-4 text-center">
+            <i class="fa-solid ${g.icon} gadget-icon mb-3"></i>
+            <h5 class="card-title">${g.name}</h5>
+            <p class="card-text text-muted">${g.desc}</p>
+          </div>
+        </div>
+      `).join('');
     }
 
     document.getElementById('reportForm').addEventListener('submit', async (e) => {
@@ -86,7 +137,7 @@
       }
       const res = await fetch('/api/reports', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ content })
       });
       if (res.ok) {
@@ -98,6 +149,7 @@
     });
 
     loadMe();
+    loadArsenal();
   </script>
 </body>
 </html>
