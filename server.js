@@ -37,10 +37,19 @@ db.exec(`
 
 const stmts = {
   insertUser: db.prepare('INSERT INTO users (username, password) VALUES (?, ?)'),
+  insertAdmin: db.prepare("INSERT INTO users (username, password, role) VALUES (?, ?, 'ADMIN')"),
   selectUserByUsername: db.prepare('SELECT id, username, password, role FROM users WHERE username = ?'),
+  countUsers: db.prepare('SELECT COUNT(*) AS c FROM users'),
   insertReport: db.prepare('INSERT INTO reports (user_id, content) VALUES (?, ?)'),
   insertLog: db.prepare('INSERT INTO logs (username) VALUES (?)')
 };
+
+const DEFAULT_ADMIN = { username: 'admin', password: 'batcave2026' };
+if (stmts.countUsers.get().c === 0) {
+  const hash = bcrypt.hashSync(DEFAULT_ADMIN.password, SALT_ROUNDS);
+  stmts.insertAdmin.run(DEFAULT_ADMIN.username, hash);
+  console.log(`Default ADMIN created: ${DEFAULT_ADMIN.username} / ${DEFAULT_ADMIN.password}`);
+}
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
