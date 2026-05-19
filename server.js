@@ -6,6 +6,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SALT_ROUNDS = 10;
+const ROLES = Object.freeze({ ADMIN: 'ADMIN', USER: 'USER' });
 
 const db = new Database(path.join(__dirname, 'database.db'));
 db.pragma('journal_mode = WAL');
@@ -34,6 +35,13 @@ db.exec(`
   );
 `);
 
+const stmts = {
+  insertUser: db.prepare('INSERT INTO users (username, password) VALUES (?, ?)'),
+  selectUserByUsername: db.prepare('SELECT id, username, password, role FROM users WHERE username = ?'),
+  insertReport: db.prepare('INSERT INTO reports (user_id, content) VALUES (?, ?)'),
+  insertLog: db.prepare('INSERT INTO logs (username) VALUES (?)')
+};
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -47,10 +55,16 @@ const GADGETS = [
   { name: 'Gel Explosif', desc: 'Demolition controlee', icon: 'fa-bomb' }
 ];
 
+const asString = (v) => (v ?? '').toString();
+
+function unauthorized(res, error) {
+  res.set('WWW-Authenticate', 'Basic realm="Batcave"');
+  return res.status(401).json({ error });
+}
+
 app.post('/register', async (req, res) => {
-  const rawUsername = (req.body.username ?? '').toString();
-  const password = (req.body.password ?? '').toString();
-  const username = rawUsername.trim();
+  const username = asString(req.body.username).trim();
+  const password = asString(req.body.password);
 
   if (!username || /\s/.test(username)) {
     return res.status(400).json({ error: "Le nom d'utilisateur ne doit pas contenir d'espaces." });
@@ -61,8 +75,7 @@ app.post('/register', async (req, res) => {
 
   try {
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
-    const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
-    const info = stmt.run(username, hash);
+    const info = stmts.insertUser.run(username, hash);
     return res.status(201).json({ id: info.lastInsertRowid, username });
   } catch (err) {
     if (err && err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
@@ -76,44 +89,30 @@ app.post('/register', async (req, res) => {
 async function basicAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Basic ')) {
-    res.set('WWW-Authenticate', 'Basic realm="Batcave"');
-    return res.status(401).json({ error: 'Authentification requise.' });
+    return unauthorized(res, 'Authentification requise.');
   }
 
-  let decoded;
-  try {
-    decoded = Buffer.from(header.slice(6), 'base64').toString('utf-8');
-  } catch {
-    res.set('WWW-Authenticate', 'Basic realm="Batcave"');
-    return res.status(401).json({ error: 'En-tete invalide.' });
-  }
-
+  const decoded = Buffer.from(header.slice(6), 'base64').toString('utf-8');
   const sep = decoded.indexOf(':');
   if (sep < 0) {
-    res.set('WWW-Authenticate', 'Basic realm="Batcave"');
-    return res.status(401).json({ error: 'En-tete invalide.' });
+    return unauthorized(res, 'En-tete invalide.');
   }
   const username = decoded.slice(0, sep);
   const password = decoded.slice(sep + 1);
 
-  const user = db.prepare('SELECT id, username, password, role FROM users WHERE username = ?').get(username);
-  if (!user) {
-    res.set('WWW-Authenticate', 'Basic realm="Batcave"');
-    return res.status(401).json({ error: 'Identifiants invalides.' });
+  const user = stmts.selectUserByUsername.get(username);
+  // Always run bcrypt.compare to keep timing roughly constant and avoid user enumeration.
+  const passwordOk = user ? await bcrypt.compare(password, user.password) : false;
+  if (!user || !passwordOk) {
+    return unauthorized(res, 'Identifiants invalides.');
   }
 
-  const ok = await bcrypt.compare(password, user.password);
-  if (!ok) {
-    res.set('WWW-Authenticate', 'Basic realm="Batcave"');
-    return res.status(401).json({ error: 'Identifiants invalides.' });
-  }
-
-  if (user.role !== 'ADMIN') {
+  if (user.role !== ROLES.ADMIN) {
     return res.status(403).json({ error: 'Acces refuse' });
   }
 
   req.user = { id: user.id, username: user.username, role: user.role };
-  db.prepare('INSERT INTO logs (username) VALUES (?)').run(user.username);
+  stmts.insertLog.run(user.username);
   next();
 }
 
@@ -130,13 +129,11 @@ app.get('/api/me', basicAuth, (req, res) => {
 });
 
 app.post('/api/reports', basicAuth, (req, res) => {
-  const content = (req.body.content ?? '').toString().trim();
+  const content = asString(req.body.content).trim();
   if (!content) {
     return res.status(400).json({ error: 'Le rapport ne peut etre vide.' });
   }
-  const info = db
-    .prepare('INSERT INTO reports (user_id, content) VALUES (?, ?)')
-    .run(req.user.id, content);
+  const info = stmts.insertReport.run(req.user.id, content);
   return res.status(201).json({ id: info.lastInsertRowid, user_id: req.user.id, content });
 });
 

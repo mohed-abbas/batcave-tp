@@ -1,0 +1,72 @@
+body {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #1a2238 0%, #0a0e1c 60%, #000 100%);
+  color: #e4e6eb;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.bat-title {
+  letter-spacing: 0.15em;
+  color: #5fb2ff;
+}
+
+.bat-surface {
+  background: rgba(20, 25, 45, 0.95);
+  border: 1px solid #2a3550;
+  color: #e4e6eb;
+}
+
+.bat-header {
+  border-bottom: 1px solid #2a3550;
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.form-control,
+textarea.form-control {
+  background: #0e1426;
+  border-color: #2a3550;
+  color: #e4e6eb;
+}
+
+.form-control:focus,
+textarea.form-control:focus {
+  background: #0e1426;
+  color: #e4e6eb;
+  border-color: #5fb2ff;
+  box-shadow: 0 0 0 0.2rem rgba(95, 178, 255, 0.25);
+}
+
+.gadget-card {
+  composes: bat-surface;
+  background: rgba(20, 25, 45, 0.95);
+  border: 1px solid #2a3550;
+  color: #e4e6eb;
+  transition: transform 0.2s, box-shadow 0.2s;
+  height: 100%;
+}
+
+.gadget-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(95, 178, 255, 0.25);
+  border-color: #5fb2ff;
+}
+
+.gadget-icon {
+  font-size: 2.5rem;
+  color: #5fb2ff;
+}
+
+.center-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-batcave {
+  background: rgba(20, 25, 45, 0.95);
+  border: 1px solid #2a3550;
+  box-shadow: 0 0 40px rgba(80, 180, 255, 0.15);
+  max-width: 440px;
+  width: 100%;
+}
