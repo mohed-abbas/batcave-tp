@@ -15,7 +15,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'USER'
   );
 
   CREATE TABLE IF NOT EXISTS reports (
@@ -24,6 +25,12 @@ db.exec(`
     content TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 `);
 
@@ -89,7 +96,7 @@ async function basicAuth(req, res, next) {
   const username = decoded.slice(0, sep);
   const password = decoded.slice(sep + 1);
 
-  const user = db.prepare('SELECT id, username, password FROM users WHERE username = ?').get(username);
+  const user = db.prepare('SELECT id, username, password, role FROM users WHERE username = ?').get(username);
   if (!user) {
     res.set('WWW-Authenticate', 'Basic realm="Batcave"');
     return res.status(401).json({ error: 'Identifiants invalides.' });
@@ -101,7 +108,12 @@ async function basicAuth(req, res, next) {
     return res.status(401).json({ error: 'Identifiants invalides.' });
   }
 
-  req.user = { id: user.id, username: user.username };
+  if (user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Acces refuse' });
+  }
+
+  req.user = { id: user.id, username: user.username, role: user.role };
+  db.prepare('INSERT INTO logs (username) VALUES (?)').run(user.username);
   next();
 }
 
