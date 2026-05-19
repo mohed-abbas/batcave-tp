@@ -17,6 +17,14 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
 `);
 
 app.use(express.json());
@@ -103,6 +111,21 @@ app.get('/bat-computer', basicAuth, (req, res) => {
 
 app.get('/api/secrets', basicAuth, (req, res) => {
   res.json(GADGETS);
+});
+
+app.get('/api/me', basicAuth, (req, res) => {
+  res.json({ id: req.user.id, username: req.user.username });
+});
+
+app.post('/api/reports', basicAuth, (req, res) => {
+  const content = (req.body.content ?? '').toString().trim();
+  if (!content) {
+    return res.status(400).json({ error: 'Le rapport ne peut etre vide.' });
+  }
+  const info = db
+    .prepare('INSERT INTO reports (user_id, content) VALUES (?, ?)')
+    .run(req.user.id, content);
+  return res.status(201).json({ id: info.lastInsertRowid, user_id: req.user.id, content });
 });
 
 app.get('/', (req, res) => res.redirect('/register.html'));

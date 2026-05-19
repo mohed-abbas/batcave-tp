@@ -22,13 +22,82 @@
       letter-spacing: 0.15em;
       color: #5fb2ff;
     }
+    .report-card {
+      background: rgba(20, 25, 45, 0.95);
+      border: 1px solid #2a3550;
+    }
+    textarea.form-control {
+      background: #0e1426;
+      border-color: #2a3550;
+      color: #e4e6eb;
+    }
+    textarea.form-control:focus {
+      background: #0e1426;
+      color: #e4e6eb;
+      border-color: #5fb2ff;
+      box-shadow: 0 0 0 0.2rem rgba(95, 178, 255, 0.25);
+    }
   </style>
 </head>
 <body>
   <header class="bat-header">
     <i class="fa-solid fa-bat fa-3x" style="color:#5fb2ff;"></i>
     <h1 class="bat-title mt-3">BAT-ORDINATEUR</h1>
-    <p class="lead text-info">Acces autorise</p>
+    <p id="welcome" class="lead text-info">Authentification...</p>
   </header>
+
+  <main class="container py-5">
+    <section>
+      <div class="card report-card p-4">
+        <h3 class="mb-3"><i class="fa-solid fa-file-pen me-2"></i>Nouveau rapport de mission</h3>
+        <form id="reportForm">
+          <div class="mb-3">
+            <textarea id="reportContent" class="form-control" rows="4" placeholder="Décrivez la mission..."></textarea>
+          </div>
+          <button class="btn btn-primary" type="submit">
+            <i class="fa-solid fa-paper-plane me-2"></i>Enregistrer
+          </button>
+          <span id="reportFeedback" class="ms-3"></span>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    async function loadMe() {
+      const res = await fetch('/api/me');
+      if (!res.ok) {
+        document.getElementById('welcome').textContent = 'Non authentifié';
+        return null;
+      }
+      const data = await res.json();
+      document.getElementById('welcome').innerHTML =
+        `Bienvenue, Justicier <strong>${data.username}</strong>`;
+      return data;
+    }
+
+    document.getElementById('reportForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const content = document.getElementById('reportContent').value.trim();
+      const fb = document.getElementById('reportFeedback');
+      if (!content) {
+        fb.innerHTML = '<span class="text-warning">Rapport vide.</span>';
+        return;
+      }
+      const res = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
+      if (res.ok) {
+        fb.innerHTML = '<span class="text-success">Rapport enregistré.</span>';
+        document.getElementById('reportContent').value = '';
+      } else {
+        fb.innerHTML = '<span class="text-danger">Échec de l\'enregistrement.</span>';
+      }
+    });
+
+    loadMe();
+  </script>
 </body>
 </html>
