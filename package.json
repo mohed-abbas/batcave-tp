@@ -1,0 +1,21 @@
+{
+  "name": "batcave-security",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --watch server.js"
+  },
+  "keywords": [
+    "batcave",
+    "auth",
+    "basic-auth"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "Systeme de securite de la Batcave - Basic Auth + Bcrypt + SQLite",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "better-sqlite3": "^11.10.0",
+    "express": "^5.2.1"
+  }
+}
