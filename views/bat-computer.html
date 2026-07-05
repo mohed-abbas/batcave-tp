@@ -12,10 +12,11 @@
   <header class="bat-header position-relative">
     <i class="fa-solid fa-bat fa-3x" style="color:#5fb2ff;"></i>
     <h1 class="bat-title mt-3">BAT-ORDINATEUR</h1>
-    <p id="welcome" class="lead text-info">Authentification...</p>
-    <button id="logoutBtn" class="btn btn-outline-light btn-sm position-absolute" style="top: 1rem; right: 1rem;">
+    <!-- {{username}} injecté côté serveur depuis req.session.user -->
+    <p id="welcome" class="lead text-info">Bienvenue, Justicier <strong>{{username}}</strong></p>
+    <a id="logoutBtn" href="/auth/logout" class="btn btn-outline-light btn-sm position-absolute" style="top: 1rem; right: 1rem;">
       <i class="fa-solid fa-right-from-bracket me-1"></i>Déconnexion
-    </button>
+    </a>
   </header>
 
   <main class="container py-5">
@@ -44,23 +45,12 @@
 
   <script src="/batcave-client.js"></script>
   <script>
-    const { authHeaders, creds, escapeHTML, postJSON } = window.Batcave;
-
-    async function loadMe() {
-      const res = await fetch('/api/me', { headers: authHeaders() });
-      const welcome = document.getElementById('welcome');
-      if (!res.ok) {
-        creds.clear();
-        welcome.textContent = 'Authentification échouée — rechargez la page';
-        return;
-      }
-      const data = await res.json();
-      welcome.innerHTML = `Bienvenue, Justicier <strong>${escapeHTML(data.username)}</strong>`;
-    }
+    // Plus de Authorization header : le cookie bat_identity part tout seul (même origine).
+    const { escapeHTML, postJSON } = window.Batcave;
 
     async function loadArsenal() {
       const arsenal = document.getElementById('arsenal');
-      const res = await fetch('/api/secrets', { headers: authHeaders() });
+      const res = await fetch('/api/secrets');
       if (!res.ok) {
         arsenal.innerHTML = '<div class="text-danger">Accès refusé à l\'arsenal.</div>';
         return;
@@ -85,7 +75,7 @@
         fb.innerHTML = '<span class="text-warning">Rapport vide.</span>';
         return;
       }
-      const res = await postJSON('/api/reports', { content }, authHeaders());
+      const res = await postJSON('/api/reports', { content });
       if (res.ok) {
         fb.innerHTML = '<span class="text-success">Rapport enregistré.</span>';
         document.getElementById('reportContent').value = '';
@@ -94,13 +84,6 @@
       }
     });
 
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      try { await fetch('/logout'); } catch {}
-      creds.clear();
-      window.location.href = '/register.html';
-    });
-
-    loadMe();
     loadArsenal();
   </script>
 </body>

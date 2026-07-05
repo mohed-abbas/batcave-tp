@@ -1,16 +1,6 @@
 (function () {
-  const CREDS_KEY = 'batcave_creds';
-
-  const creds = {
-    get: () => sessionStorage.getItem(CREDS_KEY),
-    set: (value) => sessionStorage.setItem(CREDS_KEY, value),
-    clear: () => sessionStorage.removeItem(CREDS_KEY)
-  };
-
-  function authHeaders(extra = {}) {
-    const c = creds.get();
-    return c ? { Authorization: 'Basic ' + c, ...extra } : extra;
-  }
+  // Auth désormais portée par le cookie de session (envoyé automatiquement).
+  // Plus de sessionStorage ni d'en-tête Authorization à gérer côté client.
 
   function escapeHTML(value) {
     return String(value)
@@ -21,13 +11,13 @@
       .replace(/'/g, '&#39;');
   }
 
-  async function postJSON(url, body, extraHeaders = {}) {
+  async function postJSON(url, body) {
     return fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...extraHeaders },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
   }
 
-  window.Batcave = { creds, authHeaders, escapeHTML, postJSON };
+  window.Batcave = { escapeHTML, postJSON };
 })();

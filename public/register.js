@@ -17,14 +17,14 @@ form.addEventListener('submit', async (event) => {
   const password = document.getElementById('password').value;
 
   try {
-    const res = await postJSON('/register', { username, password });
+    const res = await postJSON('/auth/register', { username, password });
     const data = await res.json().catch(() => ({}));
     const type = STATUS_TO_ALERT[res.status] || 'danger';
 
     if (res.status === 201) {
       showMessage(type,
         `Bienvenue, Justicier <strong>${escapeHTML(data.username)}</strong> ! <br/>` +
-        `Vous pouvez maintenant vous connecter au <a href="/bat-computer" class="alert-link">Bat-Ordinateur</a>.`);
+        `Vous pouvez maintenant vous <a href="/auth/login" class="alert-link">connecter</a>.`);
       form.reset();
     } else {
       showMessage(type, escapeHTML(data.error || 'Erreur inconnue.'));
