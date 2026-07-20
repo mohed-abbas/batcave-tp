@@ -9,3 +9,5 @@ audit-*.png
 *.log
 .env
 decision.md
+decisions/
+PLAN.md
