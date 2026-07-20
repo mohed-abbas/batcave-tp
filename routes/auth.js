@@ -3,56 +3,61 @@ const bcrypt = require('bcrypt');
 const fs = require('fs');
 const path = require('path');
 const { stmts, SALT_ROUNDS } = require('../config/db');
+const { REFRESH_COOKIE, issueSession, renewAccess, revokeSession } = require('../config/tokens');
 
 const router = express.Router();
 
 const LOGIN_VIEW = path.join(__dirname, '..', 'views', 'login.html');
 const asString = (v) => (v ?? '').toString();
 
-// Rend login.html en injectant un éventuel message d'erreur dans {{error}}.
-function renderLogin(error = '') {
-  const html = error
-    ? `<div class="alert alert-danger mt-3 py-2 small mb-0">${error}</div>`
-    : '';
-  return fs.readFileSync(LOGIN_VIEW, 'utf-8').replaceAll('{{error}}', html);
-}
-
 // 1) Formulaire de connexion
 router.get('/login', (req, res) => {
-  res.send(renderLogin());
+  res.send(fs.readFileSync(LOGIN_VIEW, 'utf-8'));
 });
 
-// 2) Traitement de la connexion
-router.post('/login', async (req, res, next) => {
+// 2) Traitement de la connexion : émet le couple accessToken / refreshToken.
+router.post('/login', async (req, res) => {
   const username = asString(req.body.username).trim();
   const password = asString(req.body.password);
+  const remember = Boolean(req.body.remember);
 
-  const user = stmts.selectUserByUsername.get(username);
-  // Toujours comparer (même si user absent) => temps constant, anti-énumération.
-  const passwordOk = user ? await bcrypt.compare(password, user.password) : false;
-  if (!user || !passwordOk) {
-    return res.status(401).send(renderLogin('Identifiants invalides.'));
-  }
+  try {
+    const user = stmts.selectUserByUsername.get(username);
+    // Toujours comparer (même si user absent) => temps constant, anti-énumération.
+    const passwordOk = user ? await bcrypt.compare(password, user.password) : false;
+    if (!user || !passwordOk) {
+      return res.status(401).json({ error: 'Identifiants invalides.' });
+    }
 
-  // Anti-fixation de session : on jette l'ancien ID avant d'authentifier.
-  req.session.regenerate((err) => {
-    if (err) return next(err);
-    req.session.user = { id: user.id, username: user.username, role: user.role };
+    issueSession(res, user, remember);
     stmts.insertLog.run(user.username);
-    // save() explicite : on attend l'écriture du store avant de rediriger.
-    req.session.save(() => res.redirect('/bat-computer'));
-  });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erreur serveur.' });
+  }
 });
 
-// 4) Déconnexion propre : détruit la session + efface le cookie + redirige.
+// 3) Renouvellement : le serveur reste amnésique, il ne fait confiance qu'à la base.
+router.post('/refresh', (req, res) => {
+  const user = renewAccess(res, req.cookies?.[REFRESH_COOKIE]);
+  if (!user) return res.status(401).json({ error: 'Session expirée, reconnectez-vous.' });
+  return res.json({ success: true });
+});
+
+// 4) Déconnexion : la ligne en base disparaît => un refreshToken volé devient inutile.
+router.post('/logout', (req, res) => {
+  revokeSession(res, req.cookies?.[REFRESH_COOKIE]);
+  res.json({ success: true });
+});
+
+// Navigation directe (lien du dashboard) : même révocation, puis retour au login.
 router.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie('bat_identity');
-    res.redirect('/auth/login');
-  });
+  revokeSession(res, req.cookies?.[REFRESH_COOKIE]);
+  res.redirect('/auth/login');
 });
 
-// Inscription (logique TP1 inchangée, simplement relocalisée ici).
+// Inscription (logique TP1 inchangée).
 router.post('/register', async (req, res) => {
   const username = asString(req.body.username).trim();
   const password = asString(req.body.password);

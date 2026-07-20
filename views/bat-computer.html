@@ -12,11 +12,11 @@
   <header class="bat-header position-relative">
     <i class="fa-solid fa-bat fa-3x" style="color:#5fb2ff;"></i>
     <h1 class="bat-title mt-3">BAT-ORDINATEUR</h1>
-    <!-- {{username}} injecté côté serveur depuis req.session.user -->
+    <!-- {{username}} injecté côté serveur depuis le payload du jeton (req.user) -->
     <p id="welcome" class="lead text-info">Bienvenue, Justicier <strong>{{username}}</strong></p>
-    <a id="logoutBtn" href="/auth/logout" class="btn btn-outline-light btn-sm position-absolute" style="top: 1rem; right: 1rem;">
+    <button id="logoutBtn" type="button" class="btn btn-outline-light btn-sm position-absolute" style="top: 1rem; right: 1rem;">
       <i class="fa-solid fa-right-from-bracket me-1"></i>Déconnexion
-    </a>
+    </button>
   </header>
 
   <main class="container py-5">
@@ -45,12 +45,13 @@
 
   <script src="/batcave-client.js"></script>
   <script>
-    // Plus de Authorization header : le cookie bat_identity part tout seul (même origine).
-    const { escapeHTML, postJSON } = window.Batcave;
+    // Les cookies de jetons partent tout seuls (même origine). fetchWithRetry absorbe
+    // l'expiration du jeton d'accès sans que l'utilisateur s'en aperçoive.
+    const { escapeHTML, postJSON, fetchWithRetry } = window.Batcave;
 
     async function loadArsenal() {
       const arsenal = document.getElementById('arsenal');
-      const res = await fetch('/api/secrets');
+      const res = await fetchWithRetry('/api/secrets');
       if (!res.ok) {
         arsenal.innerHTML = '<div class="text-danger">Accès refusé à l\'arsenal.</div>';
         return;
@@ -75,13 +76,24 @@
         fb.innerHTML = '<span class="text-warning">Rapport vide.</span>';
         return;
       }
-      const res = await postJSON('/api/reports', { content });
+      const res = await fetchWithRetry('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
       if (res.ok) {
         fb.innerHTML = '<span class="text-success">Rapport enregistré.</span>';
         document.getElementById('reportContent').value = '';
       } else {
         fb.innerHTML = '<span class="text-danger">Échec de l\'enregistrement.</span>';
       }
+    });
+
+    // Déconnexion en POST : le serveur supprime le refreshToken en base (révocation
+    // réelle) puis efface les deux cookies.
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await postJSON('/auth/logout', {});
+      window.location.href = '/auth/login';
     });
 
     loadArsenal();

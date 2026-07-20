@@ -32,6 +32,16 @@ db.exec(`
     username TEXT NOT NULL,
     timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+
+  -- Seul état conservé côté serveur : il rend la révocation possible (un JWT, lui,
+  -- reste valide jusqu'à sa date d'expiration quoi qu'on fasse).
+  CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT UNIQUE NOT NULL,
+    user_id INTEGER NOT NULL,
+    expires_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
 // Requêtes préparées : compilées une fois, paramétrées (?) => anti-injection SQL.
@@ -40,8 +50,13 @@ const stmts = {
   insertAdmin: db.prepare("INSERT INTO users (username, password, role) VALUES (?, ?, 'ADMIN')"),
   selectUserByUsername: db.prepare('SELECT id, username, password, role FROM users WHERE username = ?'),
   countUsers: db.prepare('SELECT COUNT(*) AS c FROM users'),
+  selectUserById: db.prepare('SELECT id, username, role FROM users WHERE id = ?'),
   insertReport: db.prepare('INSERT INTO reports (user_id, content) VALUES (?, ?)'),
-  insertLog: db.prepare('INSERT INTO logs (username) VALUES (?)')
+  insertLog: db.prepare('INSERT INTO logs (username) VALUES (?)'),
+  insertRefreshToken: db.prepare('INSERT INTO refresh_tokens (token, user_id, expires_at) VALUES (?, ?, ?)'),
+  selectRefreshToken: db.prepare('SELECT token, user_id, expires_at FROM refresh_tokens WHERE token = ?'),
+  deleteRefreshToken: db.prepare('DELETE FROM refresh_tokens WHERE token = ?'),
+  deleteExpiredRefreshTokens: db.prepare("DELETE FROM refresh_tokens WHERE expires_at < datetime('now')")
 };
 
 // Bootstrap : crée l'ADMIN par défaut au tout premier démarrage (base vide).

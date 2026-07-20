@@ -16,8 +16,9 @@
       <p class="text-muted small">Identifiez-vous pour recevoir votre badge</p>
     </div>
 
-    <!-- POST classique : c'est le serveur qui pose le cookie de session puis redirige -->
-    <form method="POST" action="/auth/login" novalidate>
+    <!-- fetch JSON : le serveur pose les deux cookies de jetons, puis le script
+         redirige. Plus de POST formulaire classique. -->
+    <form id="loginForm" novalidate>
       <div class="mb-3">
         <label for="username" class="form-label">Nom d'utilisateur</label>
         <input type="text" class="form-control" id="username" name="username" required autofocus />
@@ -26,13 +27,18 @@
         <label for="password" class="form-label">Mot de passe</label>
         <input type="password" class="form-control" id="password" name="password" required />
       </div>
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="remember" name="remember" />
+        <label class="form-check-label small text-muted" for="remember">
+          Se souvenir de mon badge sur cet appareil
+        </label>
+      </div>
       <button type="submit" class="btn btn-primary w-100">
         <i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Se connecter
       </button>
     </form>
 
-    <!-- Emplacement du message d'erreur, injecté côté serveur (vide si succès) -->
-    {{error}}
+    <div id="feedback" class="mt-3"></div>
 
     <div class="text-center mt-3">
       <a href="/register.html" class="text-info small">
@@ -40,5 +46,28 @@
       </a>
     </div>
   </div>
+
+  <script src="/batcave-client.js"></script>
+  <script>
+    const { postJSON, showError } = window.Batcave;
+
+    document.getElementById('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const res = await postJSON('/auth/login', {
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value,
+        remember: document.getElementById('remember').checked
+      });
+
+      if (res.ok) {
+        window.location.href = '/bat-computer';
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      showError(document.getElementById('feedback'), data.error || 'Erreur inconnue.');
+    });
+  </script>
 </body>
 </html>
