@@ -70,3 +70,20 @@ textarea.form-control:focus {
   max-width: 440px;
   width: 100%;
 }
+
+/* Classes de remplacement des styles inline : la CSP interdit l'attribut style,
+   qui est aussi un vecteur d'injection. */
+.bat-icon { color: #5fb2ff; }
+
+.bat-logout {
+  top: 1rem;
+  right: 1rem;
+}
+
+.bat-qr { max-width: 200px; }
+
+/* Bootstrap rend .text-muted très sombre : illisible sur notre fond nuit.
+   On relève le contraste pour rester conforme aux exigences WCAG. */
+.text-muted {
+  color: #9fb3c8 !important;
+}

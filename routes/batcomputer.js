@@ -2,7 +2,8 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { stmts } = require('../config/db');
-const { checkJWT } = require('../middlewares/authCheck');
+const { checkJWT, checkRole } = require('../middlewares/authCheck');
+const { escapeHTML } = require('../config/escape');
 
 const router = express.Router();
 
@@ -19,9 +20,11 @@ const GADGETS = [
 ];
 
 // Tableau de bord protégé : le nom de l'agent vient du payload du jeton, pas de la RAM.
+// Le pseudo est échappé avant injection : un compte nommé "<img onerror=...>" ne doit
+// pas devenir du code exécutable dans la page.
 router.get('/bat-computer', checkJWT, (req, res) => {
   const html = fs.readFileSync(DASHBOARD_VIEW, 'utf-8')
-    .replaceAll('{{username}}', req.user.username);
+    .replaceAll('{{username}}', escapeHTML(req.user.username));
   res.send(html);
 });
 
@@ -30,7 +33,13 @@ router.get('/api/secrets', checkJWT, (req, res) => {
 });
 
 router.get('/api/me', checkJWT, (req, res) => {
-  res.json({ id: req.user.id, username: req.user.username });
+  res.json({ id: req.user.id, username: req.user.username, role: req.user.role });
+});
+
+// Journal des connexions : réservé aux ADMIN. checkRole s'applique APRÈS checkJWT,
+// et lit le rôle du payload signé (donc non modifiable par le client).
+router.get('/api/logs', checkJWT, checkRole('ADMIN'), (req, res) => {
+  res.json(stmts.selectLogs.all());
 });
 
 router.post('/api/reports', checkJWT, (req, res) => {

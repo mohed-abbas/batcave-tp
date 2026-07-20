@@ -1,6 +1,7 @@
 // Vigiles de sécurité : ils valident le jeton d'accès, plus aucune session en RAM.
 const jwt = require('jsonwebtoken');
-const { ACCESS_COOKIE, REFRESH_COOKIE, renewAccess } = require('../config/tokens');
+const { ACCESS_COOKIE, REFRESH_COOKIE, renewAccess, readPendingToken } = require('../config/tokens');
+const { stmts } = require('../config/db');
 
 const isNavigation = (req) => req.get('sec-fetch-mode') === 'navigate';
 
@@ -10,7 +11,9 @@ function readAccessToken(req) {
   const token = req.cookies?.[ACCESS_COOKIE];
   if (!token) return null;
   try {
-    return jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    // Un jeton de sas (scope 2fa) ne doit jamais ouvrir une route protégée.
+    return payload.scope === 'access' ? payload : null;
   } catch {
     return null;
   }
@@ -48,4 +51,19 @@ function checkRole(role) {
   };
 }
 
-module.exports = { checkJWT, checkRole };
+// Garde des routes d'enrôlement et de vérification 2FA : l'utilisateur a prouvé le
+// facteur 1 (mot de passe) mais n'a encore aucun droit sur l'application.
+function checkPending(req, res, next) {
+  const payload = readPendingToken(req);
+  if (!payload) {
+    return res.status(401).json({ error: 'Sas expiré. Reprenez la connexion.' });
+  }
+
+  const user = stmts.selectUserById.get(payload.id);
+  if (!user) return res.status(401).json({ error: 'Sas expiré. Reprenez la connexion.' });
+
+  req.pendingUser = user;
+  return next();
+}
+
+module.exports = { checkJWT, checkRole, checkPending };

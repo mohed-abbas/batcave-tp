@@ -1,17 +1,29 @@
-const { escapeHTML, postJSON } = window.Batcave;
-
-const STATUS_TO_ALERT = { 201: 'success', 400: 'danger', 409: 'warning' };
+const { postJSON, showError } = window.Batcave;
 
 const form = document.getElementById('registerForm');
 const feedback = document.getElementById('feedback');
 
-function showMessage(type, html) {
-  feedback.innerHTML = `<div class="alert alert-${type} mb-0">${html}</div>`;
+// Construit le message de succès par le DOM : le pseudo saisi reste du texte,
+// même s'il contient des balises.
+function showWelcome(username) {
+  const alert = document.createElement('div');
+  alert.className = 'alert alert-success mb-0';
+
+  const name = document.createElement('strong');
+  name.textContent = username;
+
+  const link = document.createElement('a');
+  link.href = '/auth/login';
+  link.className = 'alert-link';
+  link.textContent = 'connecter';
+
+  alert.append('Bienvenue, Justicier ', name, ' ! Vous pouvez maintenant vous ', link, '.');
+  feedback.replaceChildren(alert);
 }
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  feedback.innerHTML = '';
+  feedback.replaceChildren();
 
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
@@ -19,17 +31,14 @@ form.addEventListener('submit', async (event) => {
   try {
     const res = await postJSON('/auth/register', { username, password });
     const data = await res.json().catch(() => ({}));
-    const type = STATUS_TO_ALERT[res.status] || 'danger';
 
     if (res.status === 201) {
-      showMessage(type,
-        `Bienvenue, Justicier <strong>${escapeHTML(data.username)}</strong> ! <br/>` +
-        `Vous pouvez maintenant vous <a href="/auth/login" class="alert-link">connecter</a>.`);
+      showWelcome(data.username);
       form.reset();
-    } else {
-      showMessage(type, escapeHTML(data.error || 'Erreur inconnue.'));
+      return;
     }
+    showError(feedback, data.error || 'Erreur inconnue.', res.status === 409 ? 'warning' : 'danger');
   } catch {
-    showMessage('danger', 'Impossible de joindre le serveur.');
+    showError(feedback, 'Impossible de joindre le serveur.');
   }
 });

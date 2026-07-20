@@ -11,13 +11,14 @@
 <body class="center-screen">
   <div class="card card-batcave p-4">
     <div class="text-center mb-3">
-      <i class="fa-solid fa-fingerprint fa-3x" style="color:#5fb2ff;"></i>
+      <i class="fa-solid fa-fingerprint fa-3x bat-icon"></i>
       <h2 class="bat-title mt-2">ACCÈS SÉCURISÉ</h2>
       <p class="text-muted small">Identifiez-vous pour recevoir votre badge</p>
     </div>
 
-    <!-- fetch JSON : le serveur pose les deux cookies de jetons, puis le script
-         redirige. Plus de POST formulaire classique. -->
+    <!-- Étape 1 — mot de passe. Le serveur ne délivre aucun jeton ici : il ouvre
+         seulement un sas en attente du second facteur. -->
+    <div id="loginZone">
     <form id="loginForm" novalidate>
       <div class="mb-3">
         <label for="username" class="form-label">Nom d'utilisateur</label>
@@ -45,29 +46,53 @@
         <i class="fa-solid fa-user-plus me-1"></i>Pas encore de badge ? S'inscrire
       </a>
     </div>
+    </div>
+
+    <!-- Étape 2 — second facteur. Les cookies ne sont posés qu'après validation. -->
+    <div id="otpZone" class="d-none">
+      <p class="text-center small text-muted">
+        <i class="fa-solid fa-mobile-screen me-1"></i>
+        Saisissez le code affiché par votre application d'authentification.
+      </p>
+      <form id="otpForm" novalidate>
+        <div class="mb-3">
+          <label for="otpCode" class="form-label">Code à 6 chiffres</label>
+          <input type="text" class="form-control text-center" id="otpCode"
+                 inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                 placeholder="000000" required />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="fa-solid fa-shield-halved me-2"></i>Vérifier le code
+        </button>
+      </form>
+      <div id="otpFeedback" class="mt-3"></div>
+    </div>
+
+    <!-- Enrôlement — affiché quand le compte n'a pas encore de second facteur. -->
+    <div id="enrollZone" class="d-none">
+      <p class="text-center small text-muted">
+        Double authentification obligatoire.<br />
+        Scannez ce QR code avec Google Authenticator, puis saisissez le premier code.
+      </p>
+      <div class="text-center mb-3">
+        <img id="qrImage" alt="QR code d'enrôlement" class="img-fluid rounded bg-white p-2 bat-qr" />
+      </div>
+      <form id="enrollForm" novalidate>
+        <div class="mb-3">
+          <label for="enrollCode" class="form-label">Code de confirmation</label>
+          <input type="text" class="form-control text-center" id="enrollCode"
+                 inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                 placeholder="000000" required />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="fa-solid fa-lock me-2"></i>Activer la double authentification
+        </button>
+      </form>
+      <div id="enrollFeedback" class="mt-3"></div>
+    </div>
   </div>
 
   <script src="/batcave-client.js"></script>
-  <script>
-    const { postJSON, showError } = window.Batcave;
-
-    document.getElementById('loginForm').addEventListener('submit', async (event) => {
-      event.preventDefault();
-
-      const res = await postJSON('/auth/login', {
-        username: document.getElementById('username').value,
-        password: document.getElementById('password').value,
-        remember: document.getElementById('remember').checked
-      });
-
-      if (res.ok) {
-        window.location.href = '/bat-computer';
-        return;
-      }
-
-      const data = await res.json().catch(() => ({}));
-      showError(document.getElementById('feedback'), data.error || 'Erreur inconnue.');
-    });
-  </script>
+  <script src="/login.js"></script>
 </body>
 </html>

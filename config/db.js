@@ -44,13 +44,31 @@ db.exec(`
   );
 `);
 
+// Migration : les comptes créés avant le TP4 n'ont pas les colonnes 2FA.
+// two_factor_secret est la clé TOTP (K) ; two_factor_enabled ne passe à 1 qu'une fois
+// la synchronisation prouvée par un premier code valide.
+const userColumns = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+if (!userColumns.includes('two_factor_secret')) {
+  db.exec('ALTER TABLE users ADD COLUMN two_factor_secret TEXT');
+}
+if (!userColumns.includes('two_factor_enabled')) {
+  db.exec('ALTER TABLE users ADD COLUMN two_factor_enabled INTEGER NOT NULL DEFAULT 0');
+}
+
 // Requêtes préparées : compilées une fois, paramétrées (?) => anti-injection SQL.
 const stmts = {
   insertUser: db.prepare('INSERT INTO users (username, password) VALUES (?, ?)'),
   insertAdmin: db.prepare("INSERT INTO users (username, password, role) VALUES (?, ?, 'ADMIN')"),
-  selectUserByUsername: db.prepare('SELECT id, username, password, role FROM users WHERE username = ?'),
+  selectUserByUsername: db.prepare(
+    'SELECT id, username, password, role, two_factor_secret, two_factor_enabled FROM users WHERE username = ?'
+  ),
   countUsers: db.prepare('SELECT COUNT(*) AS c FROM users'),
-  selectUserById: db.prepare('SELECT id, username, role FROM users WHERE id = ?'),
+  selectUserById: db.prepare(
+    'SELECT id, username, role, two_factor_secret, two_factor_enabled FROM users WHERE id = ?'
+  ),
+  setTwoFactorSecret: db.prepare('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0 WHERE id = ?'),
+  enableTwoFactor: db.prepare('UPDATE users SET two_factor_enabled = 1 WHERE id = ?'),
+  selectLogs: db.prepare('SELECT username, timestamp FROM logs ORDER BY id DESC LIMIT 50'),
   insertReport: db.prepare('INSERT INTO reports (user_id, content) VALUES (?, ?)'),
   insertLog: db.prepare('INSERT INTO logs (username) VALUES (?)'),
   insertRefreshToken: db.prepare('INSERT INTO refresh_tokens (token, user_id, expires_at) VALUES (?, ?, ?)'),

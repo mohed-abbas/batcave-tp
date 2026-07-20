@@ -4,6 +4,7 @@ require('dotenv').config(); // doit être appelé AVANT toute lecture de process
 const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
 
 const { stmts } = require('./config/db'); // initialise la base (schéma + admin par défaut)
 const authRouter = require('./routes/auth');
@@ -18,6 +19,27 @@ if (!process.env.JWT_SECRET) {
 
 // Purge des refreshTokens périmés au démarrage (la table ne grossit pas indéfiniment).
 stmts.deleteExpiredRefreshTokens.run();
+
+// Zéro-Confiance : on dicte au navigateur ce qu'il a le droit de faire.
+// Helmet pose nosniff, X-Frame-Options (anti-clickjacking), HSTS, et supprime
+// l'en-tête X-Powered-By qui annonçait « Express » à un attaquant.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      // Liste blanche des CDN réellement utilisés. Un script injecté depuis un
+      // domaine pirate est bloqué par le navigateur avant même de s'exécuter.
+      scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
+      styleSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com'],
+      fontSrc: ["'self'", 'https://cdnjs.cloudflare.com'],
+      // data: est nécessaire au QR code de la 2FA, généré en base64 par le serveur.
+      imgSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"]
+    }
+  }
+}));
 
 // Parsers de corps de requête
 app.use(express.json());                          // API JSON (login, register, reports)

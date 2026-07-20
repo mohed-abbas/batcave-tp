@@ -10,11 +10,11 @@
 </head>
 <body>
   <header class="bat-header position-relative">
-    <i class="fa-solid fa-bat fa-3x" style="color:#5fb2ff;"></i>
+    <i class="fa-solid fa-bat fa-3x bat-icon"></i>
     <h1 class="bat-title mt-3">BAT-ORDINATEUR</h1>
     <!-- {{username}} injecté côté serveur depuis le payload du jeton (req.user) -->
     <p id="welcome" class="lead text-info">Bienvenue, Justicier <strong>{{username}}</strong></p>
-    <button id="logoutBtn" type="button" class="btn btn-outline-light btn-sm position-absolute" style="top: 1rem; right: 1rem;">
+    <button id="logoutBtn" type="button" class="btn btn-outline-light btn-sm position-absolute bat-logout">
       <i class="fa-solid fa-right-from-bracket me-1"></i>Déconnexion
     </button>
   </header>
@@ -41,62 +41,18 @@
         </form>
       </div>
     </section>
+
+    <!-- Zone ADMIN : masquée par défaut, et surtout protégée côté serveur.
+         Masquer un bouton n'est pas une sécurité, c'est checkRole qui l'est. -->
+    <section id="adminZone" class="mt-5 d-none">
+      <div class="card bat-surface p-4">
+        <h3 class="mb-3"><i class="fa-solid fa-clipboard-list me-2"></i>Journal des accès</h3>
+        <ul id="logList" class="list-group list-group-flush"></ul>
+      </div>
+    </section>
   </main>
 
   <script src="/batcave-client.js"></script>
-  <script>
-    // Les cookies de jetons partent tout seuls (même origine). fetchWithRetry absorbe
-    // l'expiration du jeton d'accès sans que l'utilisateur s'en aperçoive.
-    const { escapeHTML, postJSON, fetchWithRetry } = window.Batcave;
-
-    async function loadArsenal() {
-      const arsenal = document.getElementById('arsenal');
-      const res = await fetchWithRetry('/api/secrets');
-      if (!res.ok) {
-        arsenal.innerHTML = '<div class="text-danger">Accès refusé à l\'arsenal.</div>';
-        return;
-      }
-      const gadgets = await res.json();
-      arsenal.innerHTML = gadgets.map(g => `
-        <div class="col-12 col-sm-6 col-lg-4">
-          <div class="card gadget-card p-4 text-center">
-            <i class="fa-solid ${escapeHTML(g.icon)} gadget-icon mb-3"></i>
-            <h5 class="card-title">${escapeHTML(g.name)}</h5>
-            <p class="card-text text-muted">${escapeHTML(g.desc)}</p>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    document.getElementById('reportForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const content = document.getElementById('reportContent').value.trim();
-      const fb = document.getElementById('reportFeedback');
-      if (!content) {
-        fb.innerHTML = '<span class="text-warning">Rapport vide.</span>';
-        return;
-      }
-      const res = await fetchWithRetry('/api/reports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content })
-      });
-      if (res.ok) {
-        fb.innerHTML = '<span class="text-success">Rapport enregistré.</span>';
-        document.getElementById('reportContent').value = '';
-      } else {
-        fb.innerHTML = '<span class="text-danger">Échec de l\'enregistrement.</span>';
-      }
-    });
-
-    // Déconnexion en POST : le serveur supprime le refreshToken en base (révocation
-    // réelle) puis efface les deux cookies.
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await postJSON('/auth/logout', {});
-      window.location.href = '/auth/login';
-    });
-
-    loadArsenal();
-  </script>
+  <script src="/bat-computer.js"></script>
 </body>
 </html>

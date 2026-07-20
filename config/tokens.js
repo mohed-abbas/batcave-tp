@@ -7,10 +7,12 @@ const { stmts } = require('./db');
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;            // 15 min : fenêtre d'exploitation courte si vol
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;  // 7 jours
+const PENDING_TTL_MS = 5 * 60 * 1000;            // 5 min pour saisir un code à 6 chiffres
 
 // Noms neutres : ils ne trahissent ni la techno ni le rôle du jeton.
 const ACCESS_COOKIE = 'bat_identity';
 const REFRESH_COOKIE = 'bat_recall';
+const PENDING_COOKIE = 'bat_airlock'; // sas : mot de passe validé, second facteur en attente
 
 // httpOnly => invisible du JS client (anti-XSS) ; sameSite strict => jamais envoyé
 // en cross-site (anti-CSRF) ; secure => HTTPS only en production (anti-MITM).
@@ -21,9 +23,10 @@ const BASE_COOKIE = {
 };
 
 // Le payload est lisible par n'importe qui (Base64Url) : aucune donnée sensible ici.
+// Le claim `scope` empêche qu'un jeton de sas serve de jeton d'accès.
 function signAccessToken(user) {
   return jwt.sign(
-    { id: user.id, username: user.username, role: user.role },
+    { id: user.id, username: user.username, role: user.role, scope: 'access' },
     process.env.JWT_SECRET,
     { expiresIn: ACCESS_TTL_MS / 1000 }
   );
@@ -48,7 +51,32 @@ function issueRefreshToken(res, userId, remember) {
   return token;
 }
 
+// Sas d'attente : le mot de passe est validé, mais rien n'est encore accordé.
+// Ce jeton prouve seulement « le facteur 1 est passé pour cet utilisateur ».
+// Sans lui, /verify-2fa accepterait un simple nom d'utilisateur et le mot de passe
+// deviendrait contournable.
+function issuePendingToken(res, user) {
+  const token = jwt.sign(
+    { id: user.id, scope: '2fa' },
+    process.env.JWT_SECRET,
+    { expiresIn: PENDING_TTL_MS / 1000 }
+  );
+  res.cookie(PENDING_COOKIE, token, { ...BASE_COOKIE, maxAge: PENDING_TTL_MS });
+}
+
+function readPendingToken(req) {
+  const token = req.cookies?.[PENDING_COOKIE];
+  if (!token) return null;
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    return payload.scope === '2fa' ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
 function issueSession(res, user, remember) {
+  res.clearCookie(PENDING_COOKIE); // le sas est franchi, il n'a plus lieu d'être
   setAccessCookie(res, user);
   issueRefreshToken(res, user.id, remember);
 }
@@ -74,15 +102,19 @@ function revokeSession(res, refreshToken) {
   if (refreshToken) stmts.deleteRefreshToken.run(refreshToken);
   res.clearCookie(ACCESS_COOKIE);
   res.clearCookie(REFRESH_COOKIE);
+  res.clearCookie(PENDING_COOKIE);
 }
 
 module.exports = {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
+  PENDING_COOKIE,
   ACCESS_TTL_MS,
   REFRESH_TTL_MS,
   setAccessCookie,
   issueSession,
+  issuePendingToken,
+  readPendingToken,
   renewAccess,
   revokeSession
 };
