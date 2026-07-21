@@ -42,6 +42,20 @@ db.exec(`
     expires_at TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  -- Rattachement d'une identité externe (OAuth2/OIDC) à un compte Batcave.
+  -- La contrainte d'unicité (provider, provider_user_id) empêche qu'un même compte
+  -- Google/GitHub/Discord soit lié à deux comptes locaux.
+  CREATE TABLE IF NOT EXISTS oauth_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider TEXT NOT NULL,
+    provider_user_id TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    email TEXT,
+    linked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (provider, provider_user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
 // Migration : les comptes créés avant le TP4 n'ont pas les colonnes 2FA.
@@ -69,6 +83,16 @@ const stmts = {
   setTwoFactorSecret: db.prepare('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0 WHERE id = ?'),
   enableTwoFactor: db.prepare('UPDATE users SET two_factor_enabled = 1 WHERE id = ?'),
   selectLogs: db.prepare('SELECT username, timestamp FROM logs ORDER BY id DESC LIMIT 50'),
+  insertOAuthUser: db.prepare("INSERT INTO users (username, password, role) VALUES (?, ?, 'USER')"),
+  selectOAuthAccount: db.prepare(
+    'SELECT user_id FROM oauth_accounts WHERE provider = ? AND provider_user_id = ?'
+  ),
+  insertOAuthAccount: db.prepare(
+    'INSERT INTO oauth_accounts (provider, provider_user_id, user_id, email) VALUES (?, ?, ?, ?)'
+  ),
+  selectOAuthAccountsByUser: db.prepare(
+    'SELECT provider, email, linked_at FROM oauth_accounts WHERE user_id = ? ORDER BY linked_at'
+  ),
   insertReport: db.prepare('INSERT INTO reports (user_id, content) VALUES (?, ?)'),
   insertLog: db.prepare('INSERT INTO logs (username) VALUES (?)'),
   insertRefreshToken: db.prepare('INSERT INTO refresh_tokens (token, user_id, expires_at) VALUES (?, ?, ?)'),

@@ -8,6 +8,7 @@ const helmet = require('helmet');
 
 const { stmts } = require('./config/db'); // initialise la base (schéma + admin par défaut)
 const authRouter = require('./routes/auth');
+const oauthRouter = require('./routes/oauth');
 const batcomputerRouter = require('./routes/batcomputer');
 
 const app = express();
@@ -52,8 +53,10 @@ app.use(cookieParser());
 // Fichiers publics : uniquement CSS + JS client
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Montage des routeurs
+// Montage des routeurs. authRouter d'abord : ses routes nommées (login, refresh,
+// logout, register, *-2fa) ont priorité sur le /:provider générique d'oauthRouter.
 app.use('/auth', authRouter);    // /auth/login, /auth/refresh, /auth/logout, /auth/register
+app.use('/auth', oauthRouter);   // /auth/providers, /auth/:provider, /auth/:provider/callback
 app.use('/', batcomputerRouter); // /bat-computer, /api/*
 
 app.get('/', (req, res) => res.redirect('/auth/login'));

@@ -18,6 +18,36 @@ function show(zone) {
   }
 }
 
+// Erreur renvoyée par un retour OAuth échoué (?error=... dans l'URL).
+const params = new URLSearchParams(window.location.search);
+if (params.has('error')) {
+  showError(feedback, params.get('error'));
+  window.history.replaceState({}, '', '/auth/login');
+}
+
+// Boutons de connexion externe : un par provider configuré côté serveur.
+(async () => {
+  const res = await fetch('/auth/providers');
+  const list = await res.json().catch(() => []);
+  if (!list.length) return;
+
+  const zone = document.getElementById('oauthButtons');
+  for (const p of list) {
+    const link = document.createElement('a');
+    link.href = `/auth/${p.name}`;
+    link.className = 'btn btn-outline-light d-flex align-items-center justify-content-center gap-2';
+
+    const icon = document.createElement('i');
+    icon.className = `fa-brands ${p.icon}`;
+    const label = document.createElement('span');
+    label.textContent = p.label; // textContent : le libellé reste du texte
+
+    link.append(icon, label);
+    zone.append(link);
+  }
+  document.getElementById('oauthZone').classList.remove('d-none');
+})();
+
 // Étape 1 : mot de passe.
 document.getElementById('loginForm').addEventListener('submit', async (event) => {
   event.preventDefault();
