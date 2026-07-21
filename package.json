@@ -8,11 +8,14 @@
   "keywords": [
     "batcave",
     "auth",
-    "basic-auth"
+    "jwt",
+    "2fa",
+    "totp",
+    "oauth2"
   ],
   "author": "",
   "license": "ISC",
-  "description": "Systeme de securite de la Batcave - Basic Auth + Bcrypt + SQLite",
+  "description": "Systeme de securite de la Batcave - JWT stateless, 2FA TOTP et OAuth2/OIDC",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^11.10.0",
