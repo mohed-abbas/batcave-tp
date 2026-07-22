@@ -9,10 +9,10 @@ function gadgetCard(gadget) {
   col.className = 'col-12 col-sm-6 col-lg-4';
 
   const card = document.createElement('div');
-  card.className = 'card gadget-card p-4 text-center';
+  card.className = 'gadget-card';
 
   const icon = document.createElement('i');
-  icon.className = `fa-solid gadget-icon mb-3 ${gadget.icon}`;
+  icon.className = `fa-solid gadget-icon ${gadget.icon}`;
 
   const title = document.createElement('h5');
   title.className = 'card-title';
@@ -44,6 +44,12 @@ async function loadAdminZone() {
   const me = await fetchWithRetry('/api/me');
   if (!me.ok) return;
   const { role } = await me.json();
+
+  // Reflète l'habilitation dans le HUD (info, pas sécurité).
+  const badge = document.getElementById('roleBadge');
+  badge.textContent = `Habilitation : ${role}`;
+  badge.dataset.role = role;
+
   if (role !== 'ADMIN') return;
 
   const res = await fetchWithRetry('/api/logs');
@@ -53,13 +59,13 @@ async function loadAdminZone() {
   const list = document.getElementById('logList');
   list.replaceChildren(...logs.map((entry) => {
     const item = document.createElement('li');
-    item.className = 'list-group-item bg-transparent text-light d-flex justify-content-between';
+    item.className = 'list-group-item d-flex justify-content-between';
 
     const who = document.createElement('span');
     who.textContent = entry.username;
 
     const when = document.createElement('span');
-    when.className = 'text-muted small';
+    when.className = 'log-when';
     when.textContent = entry.timestamp;
 
     item.append(who, when);

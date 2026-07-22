@@ -3,100 +3,104 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Batcave — Connexion</title>
+  <title>Batcave — Contrôle d'accès</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Saira+Condensed:wght@500;600;700&family=Saira+Stencil+One&display=swap" rel="stylesheet" />
   <link href="/batcave.css" rel="stylesheet" />
 </head>
 <body class="center-screen">
-  <div class="card card-batcave p-4">
-    <div class="text-center mb-3">
-      <i class="fa-solid fa-fingerprint fa-3x bat-icon"></i>
-      <h2 class="bat-title mt-2">ACCÈS SÉCURISÉ</h2>
-      <p class="text-muted small">Identifiez-vous pour recevoir votre badge</p>
+  <main class="terminal">
+    <span class="reticle-corner tl"></span>
+    <span class="reticle-corner tr"></span>
+    <span class="reticle-corner bl"></span>
+    <span class="reticle-corner br"></span>
+
+    <div class="text-center">
+      <span class="signal"><svg class="signal__bat" viewBox="0 0 120 46" aria-hidden="true"><g fill="currentColor"><path d="M60 16 L64 6 L68 15 C80 6 98 6 112 16 C106 24 100 12 92 30 C88 22 82 14 72 30 C68 24 64 24 60 40 Z"/><path d="M60 16 L56 6 L52 15 C40 6 22 6 8 16 C14 24 20 12 28 30 C32 22 38 14 48 30 C52 24 56 24 60 40 Z"/></g></svg></span>
+      <p class="eyebrow mt-3 mb-0">Batcave · Terminal sécurisé</p>
+      <h1 class="wordmark">Contrôle d'accès</h1>
+      <p class="lede">Authentification requise pour le Bat-Ordinateur.</p>
     </div>
 
-    <!-- Étape 1 — mot de passe. Le serveur ne délivre aucun jeton ici : il ouvre
-         seulement un sas en attente du second facteur. -->
+    <!-- Signature : l'escalade des facteurs. data-stage avance en JS. -->
+    <ol class="clearance" id="clearance" data-stage="1">
+      <li class="clearance__step"><span class="clearance__n">01</span><span class="clearance__l">Identité</span></li>
+      <li class="clearance__step"><span class="clearance__n">02</span><span class="clearance__l">Jeton</span></li>
+      <li class="clearance__step"><span class="clearance__n">03</span><span class="clearance__l">Accès</span></li>
+    </ol>
+
+    <!-- Étape 1 — mot de passe. Le serveur ouvre un sas, sans délivrer de jeton. -->
     <div id="loginZone">
-    <form id="loginForm" novalidate>
-      <div class="mb-3">
-        <label for="username" class="form-label">Nom d'utilisateur</label>
-        <input type="text" class="form-control" id="username" name="username" required autofocus />
-      </div>
-      <div class="mb-3">
-        <label for="password" class="form-label">Mot de passe</label>
-        <input type="password" class="form-control" id="password" name="password" required />
-      </div>
-      <div class="form-check mb-3">
-        <input class="form-check-input" type="checkbox" id="remember" name="remember" />
-        <label class="form-check-label small text-muted" for="remember">
-          Se souvenir de mon badge sur cet appareil
-        </label>
-      </div>
-      <button type="submit" class="btn btn-primary w-100">
-        <i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Se connecter
-      </button>
-    </form>
+      <form id="loginForm" novalidate>
+        <div class="mb-3">
+          <label for="username" class="form-label">Identifiant opérateur</label>
+          <input type="text" class="form-control" id="username" name="username" required autofocus autocomplete="username" />
+        </div>
+        <div class="mb-3">
+          <label for="password" class="form-label">Mot de passe</label>
+          <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password" />
+        </div>
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="remember" name="remember" />
+          <label class="form-check-label" for="remember">Mémoriser ce badge sur l'appareil</label>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Authentifier</button>
+      </form>
 
-    <div id="feedback" class="mt-3"></div>
+      <div id="feedback" class="mt-3"></div>
 
-    <!-- Connexion externe : boutons injectés selon les providers configurés. -->
-    <div id="oauthZone" class="mt-4 d-none">
-      <div class="text-center text-muted small mb-2">ou continuer avec</div>
-      <div id="oauthButtons" class="d-grid gap-2"></div>
-    </div>
+      <!-- Clearance externe : boutons injectés selon les providers configurés. -->
+      <div id="oauthZone" class="d-none">
+        <div class="rule-label">Clearance externe</div>
+        <div id="oauthButtons" class="d-grid gap-2"></div>
+      </div>
 
-    <div class="text-center mt-3">
-      <a href="/register.html" class="text-info small">
-        <i class="fa-solid fa-user-plus me-1"></i>Pas encore de badge ? S'inscrire
-      </a>
-    </div>
+      <p class="text-center mt-3 mb-0">
+        <a href="/register.html" class="eyebrow">Nouvel opérateur — s'enregistrer</a>
+      </p>
     </div>
 
     <!-- Étape 2 — second facteur. Les cookies ne sont posés qu'après validation. -->
     <div id="otpZone" class="d-none">
-      <p class="text-center small text-muted">
-        <i class="fa-solid fa-mobile-screen me-1"></i>
-        Saisissez le code affiché par votre application d'authentification.
+      <p class="muted-note text-center">
+        Saisissez le code à 6 chiffres de votre application d'authentification.
       </p>
       <form id="otpForm" novalidate>
         <div class="mb-3">
-          <label for="otpCode" class="form-label">Code à 6 chiffres</label>
-          <input type="text" class="form-control text-center" id="otpCode"
+          <label for="otpCode" class="form-label">Jeton temporel</label>
+          <input type="text" class="form-control code-input" id="otpCode"
                  inputmode="numeric" autocomplete="one-time-code" maxlength="6"
-                 placeholder="000000" required />
+                 placeholder="••••••" required />
         </div>
-        <button type="submit" class="btn btn-primary w-100">
-          <i class="fa-solid fa-shield-halved me-2"></i>Vérifier le code
-        </button>
+        <button type="submit" class="btn btn-primary w-100">Valider le jeton</button>
       </form>
       <div id="otpFeedback" class="mt-3"></div>
     </div>
 
-    <!-- Enrôlement — affiché quand le compte n'a pas encore de second facteur. -->
+    <!-- Enrôlement — quand le compte n'a pas encore de second facteur. -->
     <div id="enrollZone" class="d-none">
-      <p class="text-center small text-muted">
-        Double authentification obligatoire.<br />
-        Scannez ce QR code avec Google Authenticator, puis saisissez le premier code.
+      <p class="muted-note text-center">
+        Double authentification obligatoire. Scannez ce code avec Google Authenticator,
+        puis saisissez le premier jeton généré.
       </p>
       <div class="text-center mb-3">
-        <img id="qrImage" alt="QR code d'enrôlement" class="img-fluid rounded bg-white p-2 bat-qr" />
+        <img id="qrImage" alt="Code d'enrôlement à scanner" class="bat-qr" />
       </div>
       <form id="enrollForm" novalidate>
         <div class="mb-3">
-          <label for="enrollCode" class="form-label">Code de confirmation</label>
-          <input type="text" class="form-control text-center" id="enrollCode"
+          <label for="enrollCode" class="form-label">Jeton de confirmation</label>
+          <input type="text" class="form-control code-input" id="enrollCode"
                  inputmode="numeric" autocomplete="one-time-code" maxlength="6"
-                 placeholder="000000" required />
+                 placeholder="••••••" required />
         </div>
-        <button type="submit" class="btn btn-primary w-100">
-          <i class="fa-solid fa-lock me-2"></i>Activer la double authentification
-        </button>
+        <button type="submit" class="btn btn-primary w-100">Armer la double authentification</button>
       </form>
       <div id="enrollFeedback" class="mt-3"></div>
     </div>
-  </div>
+  </main>
 
   <script src="/batcave-client.js"></script>
   <script src="/login.js"></script>

@@ -31,8 +31,13 @@ app.use(helmet({
       // Liste blanche des CDN réellement utilisés. Un script injecté depuis un
       // domaine pirate est bloqué par le navigateur avant même de s'exécuter.
       scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
-      styleSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com'],
-      fontSrc: ["'self'", 'https://cdnjs.cloudflare.com'],
+      styleSrc: [
+        "'self'",
+        'https://cdn.jsdelivr.net',
+        'https://cdnjs.cloudflare.com',
+        'https://fonts.googleapis.com'
+      ],
+      fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://fonts.gstatic.com'],
       // data: est nécessaire au QR code de la 2FA, généré en base64 par le serveur.
       imgSrc: ["'self'", 'data:'],
       connectSrc: ["'self'"],

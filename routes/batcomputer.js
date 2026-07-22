@@ -11,9 +11,9 @@ const DASHBOARD_VIEW = path.join(__dirname, '..', 'views', 'bat-computer.html');
 const asString = (v) => (v ?? '').toString();
 
 const GADGETS = [
-  { name: 'Batarang', desc: 'Arme de jet', icon: 'fa-shuriken' },
+  { name: 'Batarang', desc: 'Arme de jet', icon: 'fa-star' },
   { name: 'Grappin', desc: 'Deplacement vertical', icon: 'fa-anchor' },
-  { name: 'Bat-Signal', desc: "Communication d'urgence", icon: 'fa-bullhorn' },
+  { name: 'Bat-Signal', desc: "Communication d'urgence", icon: 'fa-tower-broadcast' },
   { name: 'Smoke Pellets', desc: 'Esquive tactique', icon: 'fa-cloud' },
   { name: 'Cles Batmobile', desc: 'Vehicule blinde', icon: 'fa-car' },
   { name: 'Gel Explosif', desc: 'Demolition controlee', icon: 'fa-bomb' }

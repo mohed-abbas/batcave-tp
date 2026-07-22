@@ -7,15 +7,18 @@ const loginZone = document.getElementById('loginZone');
 const otpZone = document.getElementById('otpZone');
 const enrollZone = document.getElementById('enrollZone');
 const qrImage = document.getElementById('qrImage');
+const clearance = document.getElementById('clearance');
 
 // Mémorisé côté client uniquement pour être renvoyé après le second facteur :
 // le serveur ne décide de la durée du cookie qu'à l'émission finale des jetons.
 let remember = false;
 
+// Affiche une zone ET fait avancer la bande de niveaux : identité -> jeton.
 function show(zone) {
   for (const z of [loginZone, otpZone, enrollZone]) {
     z.classList.toggle('d-none', z !== zone);
   }
+  clearance.dataset.stage = zone === loginZone ? '1' : '2';
 }
 
 // Erreur renvoyée par un retour OAuth échoué (?error=... dans l'URL).
@@ -35,10 +38,11 @@ if (params.has('error')) {
   for (const p of list) {
     const link = document.createElement('a');
     link.href = `/auth/${p.name}`;
-    link.className = 'btn btn-outline-light d-flex align-items-center justify-content-center gap-2';
+    link.className = 'oauth-btn';
+    link.dataset.p = p.name; // couleur de marque via CSS, jamais de style inline (CSP)
 
     const icon = document.createElement('i');
-    icon.className = `fa-brands ${p.icon}`;
+    icon.className = `fa-brands ${p.icon} brand`;
     const label = document.createElement('span');
     label.textContent = p.label; // textContent : le libellé reste du texte
 
