@@ -32,6 +32,19 @@ router.get('/login', (req, res) => {
   res.send(fs.readFileSync(LOGIN_VIEW, 'utf-8'));
 });
 
+// Relais post-OAuth : une redirection directe du callback vers /bat-computer ferait
+// encore partie de la navigation initiée cross-site (provider -> nous), et les cookies
+// de session en sameSite 'strict' n'y seraient pas attachés. Cette page publique
+// termine la chaîne cross-site, puis un meta-refresh déclenche une navigation
+// same-site vers le dashboard, qui elle porte bien les cookies.
+router.get('/complete', (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8" />
+<meta http-equiv="refresh" content="0; url=/bat-computer" />
+<title>Connexion…</title></head>
+<body><p>Connexion réussie, redirection…</p></body></html>`);
+});
+
 // 2) Premier verrou : le mot de passe. Il n'ouvre plus rien à lui seul.
 router.post('/login', loginLimiter, async (req, res) => {
   const username = asString(req.body.username).trim();

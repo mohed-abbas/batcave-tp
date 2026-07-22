@@ -145,7 +145,9 @@ router.get('/:provider/callback', async (req, res, next) => {
     res.clearCookie(FLOW_COOKIE);
     issueSession(res, user, true); // connexion via provider : badge mémorisé
     stmts.insertLog.run(user.username);
-    return res.redirect('/bat-computer');
+    // Relais same-site : voir GET /auth/complete. Une redirection directe vers
+    // /bat-computer perdrait les cookies sameSite 'strict' (chaîne cross-site).
+    return res.redirect('/auth/complete');
   } catch (err) {
     console.error(err);
     return failure('Échec de la connexion externe.');
